@@ -1,11 +1,12 @@
-window.addEventListener('DOMContentLoaded', function() {
-    const quantity = document.getElementById('quantity');
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.getElementById('quantity');
+    const serviceTypeRadios = document.querySelectorAll('input[name="serviceType"]');
     const optionsGroup = document.getElementById('optionsGroup');
     const propertiesGroup = document.getElementById('propertiesGroup');
-    const totalPrice = document.getElementById('totalPrice');
+    const totalPriceElement = document.getElementById('totalPrice');
     const quantityError = document.getElementById('quantityError');
 
-    const prices = {
+    const servicePrices = {
         basic: 4500,
         premium: 5500,
         vip: 5000
@@ -17,69 +18,81 @@ window.addEventListener('DOMContentLoaded', function() {
         priority: 800
     };
 
-    function isValidNumber(input) {
-        return /^\d+$/.test(input);
-    }
-
-    function getSelectedType() {
-        return document.querySelector('input[name="serviceType"]:checked').value;
-    }
+    const propertyPrice = 1000;
 
     function validateQuantity() {
-        if (!isValidNumber(quantity.value)) {
+        const quantity = quantityInput.value.trim();
+        const isValid = /^\d+$/.test(quantity) && parseInt(quantity) > 0;
+
+        if (!isValid) {
             quantityError.style.display = 'block';
-            return 0;
+            return false;
         } else {
             quantityError.style.display = 'none';
-            return parseInt(quantity.value);
+            return true;
         }
     }
 
-    function calculate() {
-        const type = getSelectedType();
-        const count = validateQuantity();
+    function toggleAdditionalOptions() {
+        const selectedService = document.querySelector('input[name="serviceType"]:checked').value;
 
-        if (count === 0) {
-            totalPrice.textContent = '0';
+        if (selectedService === 'premium') {
+            optionsGroup.classList.remove('hidden');
+        } else {
+            optionsGroup.classList.add('hidden');
+            document.getElementById('options').value = 'standard';
+        }
+
+        if (selectedService === 'basic') {
+            propertiesGroup.classList.remove('hidden');
+        } else {
+            propertiesGroup.classList.add('hidden');
+            document.getElementById('property').checked = false;
+        }
+    }
+
+    function calculateTotal() {
+        if (!validateQuantity()) {
+            totalPriceElement.textContent = '0';
             return;
         }
 
-        let price = prices[type];
+        const quantity = parseInt(quantityInput.value);
+        const selectedService = document.querySelector('input[name="serviceType"]:checked').value;
+        const selectedOption = document.getElementById('options').value;
+        const hasProperty = document.getElementById('property').checked;
 
-        if (type === 'premium') {
-            price += optionPrices[document.getElementById('options').value];
+        let basePrice = servicePrices[selectedService];
+        let optionPrice = 0;
+        let propertyCost = 0;
+
+        if (selectedService === 'premium') {
+            optionPrice = optionPrices[selectedOption];
         }
 
-        if (type === 'vip' && document.getElementById('property').checked) {
-            price += 1000;
+        if (selectedService === 'basic' && hasProperty) {
+            propertyCost = propertyPrice;
         }
 
-        totalPrice.textContent = price * count;
+        const total = (basePrice + optionPrice + propertyCost) * quantity;
+        totalPriceElement.textContent = total.toLocaleString();
     }
 
-    function updateVisibility() {
-        const type = getSelectedType();
-
-        optionsGroup.classList.toggle('hidden', type !== 'premium');
-        propertiesGroup.classList.toggle('hidden', type !== 'vip');
-    }
-
-    function handleTypeChange() {
-        updateVisibility();
-        calculate();
-    }
-
-
-    quantity.addEventListener('input', function() {
-        calculate();
+    quantityInput.addEventListener('input', function() {
+        validateQuantity();
+        calculateTotal();
     });
 
-    document.querySelectorAll('input[name="serviceType"]').forEach(radio => {
-        radio.addEventListener('change', handleTypeChange);
+    serviceTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            toggleAdditionalOptions();
+            calculateTotal();
+        });
     });
-    document.getElementById('options').addEventListener('change', calculate);
-    document.getElementById('property').addEventListener('change', calculate);
 
-    updateVisibility();
-    calculate();
+    document.getElementById('options').addEventListener('change', calculateTotal);
+    document.getElementById('property').addEventListener('change', calculateTotal);
+
+    toggleAdditionalOptions();
+    calculateTotal();
 });
