@@ -1,143 +1,85 @@
-> Anastasia:
-// Базовая конфигурация цен
-const priceConfig = {
-    basic: {
-        basePrice: 1000,
-        options: {},
-        property: false
-    },
-    premium: {
-        basePrice: 2000,
-        options: {
-            standard: 0,
-            extended: 500,
-            professional: 1000
-        },
-        property: false
-    },
-    custom: {
-        basePrice: 1500,
-        options: {},
-        property: {
-            enabled: 800
+window.addEventListener('DOMContentLoaded', function() {
+    const quantity = document.getElementById('quantity');
+    const optionsGroup = document.getElementById('optionsGroup');
+    const propertiesGroup = document.getElementById('propertiesGroup');
+    const totalPrice = document.getElementById('totalPrice');
+    const quantityError = document.getElementById('quantityError');
+
+    const prices = {
+        basic: 4500,
+        premium: 5500,
+        vip: 5000
+    };
+
+    const optionPrices = {
+        standard: 0,
+        express: 500,
+        priority: 800
+    };
+
+    function isValidNumber(input) {
+        return /^\d+$/.test(input);
+    }
+
+    function getSelectedType() {
+        return document.querySelector('input[name="serviceType"]:checked').value;
+    }
+
+    function validateQuantity() {
+        if (!isValidNumber(quantity.value)) {
+            quantityError.style.display = 'block';
+            return 0;
+        } else {
+            quantityError.style.display = 'none';
+            return parseInt(quantity.value);
         }
     }
-};
 
-// Текущее состояние калькулятора
-let currentState = {
-    quantity: 1,
-    serviceType: 'basic',
-    option: 'standard',
-    propertyEnabled: false
-};
+    function calculate() {
+        const type = getSelectedType();
+        const count = validateQuantity();
 
-// Инициализация после загрузки DOM
-window.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM fully loaded and parsed");
-    
-    // Получаем элементы DOM
-    const quantityInput = document.getElementById('quantity');
-    const serviceTypeRadios = document.querySelectorAll('input[name="serviceType"]');
-    const optionsSelect = document.getElementById('options');
-    const propertyCheckbox = document.getElementById('property');
-    const optionsGroup = document.getElementById('options-group');
-    const propertyGroup = document.getElementById('property-group');
-    
-    // Инициализируем начальное состояние
-    updateDynamicFields();
-    calculateTotal();
-    
-    // Обработчики событий
-    
-    // Изменение количества
-    quantityInput.addEventListener('input', function() {
-        currentState.quantity = parseInt(this.value) || 1;
-        calculateTotal();
+        if (count === 0) {
+            totalPrice.textContent = '0';
+            return;
+        }
+
+        let price = prices[type];
+
+        if (type === 'premium') {
+            price += optionPrices[document.getElementById('options').value];
+        }
+
+        if (type === 'vip' && document.getElementById('property').checked) {
+            price += 1000;
+        }
+
+        totalPrice.textContent = price * count;
+    }
+
+    function updateVisibility() {
+        const type = getSelectedType();
+
+        optionsGroup.classList.toggle('hidden', type !== 'premium');
+        propertiesGroup.classList.toggle('hidden', type !== 'vip');
+    }
+
+    function handleTypeChange() {
+        updateVisibility();
+        calculate();
+    }
+
+
+    quantity.addEventListener('input', function() {
+        calculate();
     });
-    
-    // Изменение типа услуги
-    serviceTypeRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.checked) {
-                currentState.serviceType = this.value;
-                updateDynamicFields();
-                calculateTotal();
-            }
-        });
+
+    document.querySelectorAll('input[name="serviceType"]').forEach(radio => {
+        radio.addEventListener('change', handleTypeChange);
     });
-    
-    // Изменение опции
-    optionsSelect.addEventListener('change', function() {
-        currentState.option = this.value;
-        calculateTotal();
-    });
-    
-    // Изменение свойства
-    propertyCheckbox.addEventListener('change', function() {
-        currentState.propertyEnabled = this.checked;
-        calculateTotal();
-    });
+    document.getElementById('options').addEventListener('change', calculate);
+    document.getElementById('property').addEventListener('change', calculate);
+
+    updateVisibility();
+    calculate();
 });
-
-// Функция для обновления динамических полей
-function updateDynamicFields() {
-    const optionsGroup = document.getElementById('options-group');
-    const propertyGroup = document.getElementById('property-group');
-    const optionsSelect = document.getElementById('options');
-    const propertyCheckbox = document.getElementById('property');
-    
-    // Сбрасываем состояния
-    optionsGroup.classList.add('hidden');
-    propertyGroup.classList.add('hidden');
-    propertyCheckbox.checked = false;
-    currentState.propertyEnabled = false;
-    
-    // Показываем/скрываем поля в зависимости от типа услуги
-    switch(currentState.serviceType) {
-        case 'basic':
-            // Ничего не показываем
-            break;
-        case 'premium':
-            optionsGroup.classList.remove('hidden');
-            break;
-        case 'custom':
-            propertyGroup.classList.remove('hidden');
-            break;
-    }
-    
-    // Сбрасываем опцию по умолчанию
-    currentState.option = 'standard';
-    optionsSelect.value = 'standard';
-}
-
-// Функция для расчета общей стоимости
-function calculateTotal() {
-    const config = priceConfig[currentState.serviceType];
-    let total = config.basePrice;
-    
-    // Добавляем стоимость опции для premium услуг
-    if (currentState.serviceType === 'premium' && config.options) {
-        total += config.options[currentState.option] || 0;
-    }
-    
-    // Добавляем стоимость свойства для custom услуг
-    if (currentState.serviceType === 'custom' && currentState.propertyEnabled) {
-        total += config.property.enabled;
-    }
-    
-    // Умножаем на количество
-    total *= currentState.quantity;
-
-> Anastasia:
-// Обновляем отображение
-    document.getElementById('total-cost').textContent = total.toLocaleString('ru-RU');
-    
-    console.log('Расчет стоимости:', {
-        serviceType: currentState.serviceType,
-        quantity: currentState.quantity,
-        option: currentState.option,
-        propertyEnabled: currentState.propertyEnabled,
-        total: total
-    });
-}
